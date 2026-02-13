@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Poll;
 use Livewire\Component;
 
 new class extends Component {
@@ -27,12 +28,25 @@ new class extends Component {
             'content' => 'required',
         ]);
 
-        dd($this->title, $this->content);
+        $poll = Poll::create([
+            'title' => $this->title,
+        ])->options()->createMany(
+            collect($this->options)
+                ->map(fn($option) => ['name' => $option])
+                ->all()
+        );
+
+        // foreach ($this->options as $optionName) {
+        //     $poll->options()->create([
+        //         "name" => $optionName
+        //     ]);
+        // }
+        $this->reset(['title', 'options']);
     }
 };
 ?>
 
-<form wire:submit="save">
+<form wire:submit.prevent="save">
     <label>
         Title
         <input type="text" wire:model.live.debounce.500ms="title">
