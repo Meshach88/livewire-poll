@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Option;
 use App\Models\Poll;
 use Livewire\Component;
 
@@ -9,6 +10,21 @@ new class extends Component {
     public string $content = '';
 
     public $options = [''];
+
+    protected $listeners = [
+        "vote" => 'vote'
+    ];
+
+    protected $rules = [
+        'title' => 'required',
+        'content' => 'required|max:255',
+        'options' => 'required|array|min:1|max:10',
+        'options.*' => 'required|string|max:255'
+    ];
+
+    protected $messages = [
+        'options.*' => 'This option is required'
+    ];
 
     public function addOptions()
     {
@@ -21,13 +37,24 @@ new class extends Component {
         $this->options = array_values($this->options);
     }
 
+    public function updated($propertyName)
+    {
+        $this->validateOnly($propertyName);
+    }
+
+    public function vote(Option $option)
+    {
+        $option->votes()->create();
+        $this->dispatch('voteAdded');
+    }
+
     public function save()
     {
-        $this->validate([
-            'title' => 'required|max:255',
-            'content' => 'required',
-        ]);
-
+        // $this->validate([
+        //     'title' => 'required|max:255',
+        //     'content' => 'required',
+        // ]);
+        $this->validate();
         $poll = Poll::create([
             'title' => $this->title,
         ])->options()->createMany(
@@ -42,6 +69,7 @@ new class extends Component {
         //     ]);
         // }
         $this->reset(['title', 'options']);
+        $this->dispatch('pollCreated');
     }
 };
 ?>
@@ -50,7 +78,6 @@ new class extends Component {
     <label>
         Title
         <input type="text" wire:model.live.debounce.500ms="title">
-        Current title: {{ strtolower($title) }}
         @error('title') <span style="color: red;">{{ $message }}</span> @enderror
     </label>
 
@@ -69,8 +96,9 @@ new class extends Component {
             <input type="text" wire:model.live="options.{{ $index }}">
             <button class="btn" wire:click.prevent="removeOption({{ $index }})">Remove</button>
         </div>
+        @error("options.{$index}") <span style="color: red;">{{ $message }}</span> @enderror
     </div>
     @endforeach
 
-    <button type="submit">Save Post</button>
+    <button type="submit">Save</button>
 </form>
